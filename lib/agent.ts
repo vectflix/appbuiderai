@@ -18,7 +18,7 @@ export async function runAgent(messages: any[]): Promise<AgentResponse> {
       Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
     },
     body: JSON.stringify({
-      model: "llama-3.1-70b-versatile",
+      model: "llama3-70b-8192",  // safer model
       temperature: 0.7,
       messages: [
         {
@@ -26,18 +26,12 @@ export async function runAgent(messages: any[]): Promise<AgentResponse> {
           content: `
 You are an autonomous AI software architect.
 
-Rules:
-- Ask clarifying questions if user request is vague.
-- If enough details exist, move to planning.
-- After planning, generate structured files.
-- Always respond ONLY in JSON format.
-
-JSON FORMAT:
+Always respond in STRICT JSON format:
 
 {
   "phase": "question" | "planning" | "generating" | "complete",
-  "message": "assistant conversational message",
-  "estimated_time": number_in_seconds,
+  "message": "assistant message",
+  "estimated_time": number,
   "files": [
     {
       "filename": "string",
@@ -46,7 +40,7 @@ JSON FORMAT:
   ]
 }
 
-If not generating yet, do not include files.
+If not generating, do not include files.
           `
         },
         ...messages
@@ -56,16 +50,17 @@ If not generating yet, do not include files.
 
   const data = await response.json()
 
-  const content = data.choices?.[0]?.message?.content
+  console.log("Groq raw response:", JSON.stringify(data))
 
-  if (!content) {
-    throw new Error("No response from Groq")
+  if (!data.choices) {
+    throw new Error(JSON.stringify(data))
   }
+
+  const content = data.choices[0].message.content
 
   try {
     return JSON.parse(content)
-  } catch (err) {
-    console.error("Invalid JSON from model:", content)
-    throw new Error("Model did not return valid JSON")
+  } catch {
+    throw new Error("Model returned invalid JSON")
   }
 }
