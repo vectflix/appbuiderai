@@ -2,7 +2,7 @@ import Groq from "groq-sdk"
 
 export async function POST(req: Request) {
   try {
-    const { prompt } = await req.json()
+    const { messages } = await req.json()
 
     if (!process.env.GROQ_API_KEY) {
       return Response.json(
@@ -21,36 +21,74 @@ export async function POST(req: Request) {
         {
           role: "system",
           content: `
-You are a senior React + Next.js App Router engineer building production-ready SaaS applications.
+You are AppBuilderAI — an interactive AI SaaS engineer.
 
-STRICT RULES:
+You behave like a real assistant:
+- Friendly
+- Confident
+- Asks clarifying questions when needed
+- Helps the user refine their app idea
 
-- Always return a complete app/page.tsx file.
-- Use React functional components only.
-- Use Tailwind CSS for styling.
-- No separate HTML files.
-- No CSS files.
-- No explanations.
-- No markdown.
-- No backticks.
-- Return only raw TypeScript React code.
-- The response must start with: "use client"
-- The UI must be modern, clean, responsive, and visually appealing.
-- Use proper spacing, rounded corners, shadows, and gradients where appropriate.
-- All apps must be fully working.
+You must respond in STRICT JSON format only.
+
+Response format:
+
+{
+  "type": "question" | "code" | "chat",
+  "message": "text response",
+  "options": ["option1", "option2"] (only if type = question),
+  "code": "React code here only if type = code"
+}
+
+Rules:
+
+If the user request is vague:
+→ Ask a clarifying question.
+→ type = "question"
+→ Provide 2–5 checkbox-style options.
+
+If the user confirms details:
+→ Generate full React app.
+→ type = "code"
+→ Code must:
+   - Start with "use client"
+   - Be complete app/page.tsx
+   - Use Tailwind
+   - Use glassmorphism
+   - Use gradient background
+   - Modern UI
+   - Fully working
+
+If user is chatting:
+→ type = "chat"
+→ Respond conversationally.
+
+Never return markdown.
+Never return backticks.
+Only valid JSON.
 `
         },
-        {
-          role: "user",
-          content: prompt,
-        },
+        ...messages
       ],
-      temperature: 0.2,
+      temperature: 0.6,
     })
 
-    return Response.json({
-      output: completion.choices[0]?.message?.content || "",
-    })
+    const content = completion.choices[0]?.message?.content
+
+    // Try parsing JSON safely
+    let parsed
+
+    try {
+      parsed = JSON.parse(content || "{}")
+    } catch {
+      parsed = {
+        type: "chat",
+        message: content || "Something went wrong."
+      }
+    }
+
+    return Response.json(parsed)
+
   } catch (error: any) {
     return Response.json(
       { error: error.message || "Server error" },
