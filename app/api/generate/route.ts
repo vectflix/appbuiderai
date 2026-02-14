@@ -1,19 +1,26 @@
 import Groq from "groq-sdk"
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY
-})
-
 export async function POST(req: Request) {
   try {
     const { prompt } = await req.json()
 
+    if (!process.env.GROQ_API_KEY) {
+      return Response.json(
+        { error: "Missing GROQ_API_KEY" },
+        { status: 500 }
+      )
+    }
+
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY
+    })
+
     const completion = await groq.chat.completions.create({
-      model: "mixtral-8x7b-32768",
+      model: "llama3-8b-8192",
       messages: [
         {
           role: "system",
-          content: "You are an expert full-stack developer. Output clean code only."
+          content: "You are an expert full-stack developer. Return only clean code."
         },
         {
           role: "user",
@@ -23,9 +30,12 @@ export async function POST(req: Request) {
     })
 
     return Response.json({
-      output: completion.choices[0].message.content
+      output: completion.choices[0]?.message?.content || "No response"
     })
-  } catch (error) {
-    return Response.json({ error: "AI failed" }, { status: 500 })
+  } catch (error: any) {
+    return Response.json(
+      { error: error.message || "Unknown error" },
+      { status: 500 }
+    )
   }
 }
