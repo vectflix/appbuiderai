@@ -12,17 +12,26 @@ export default function Dashboard() {
 
     setLoading(true)
 
-    const res = await fetch("/api/generate", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ prompt })
-    })
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prompt })
+      })
 
-    const data = await res.json()
+      const data = await res.json()
 
-    setCode(data.output || "Error generating code")
+      if (data.output) {
+        setCode(data.output)
+      } else {
+        setCode("ERROR: " + JSON.stringify(data))
+      }
+    } catch (err: any) {
+      setCode("FETCH ERROR: " + err.message)
+    }
+
     setLoading(false)
   }
 
@@ -36,7 +45,13 @@ export default function Dashboard() {
         color: "white"
       }}
     >
-      <div style={{ padding: "15px", borderBottom: "1px solid #222" }}>
+      <div
+        style={{
+          padding: "15px",
+          borderBottom: "1px solid #222",
+          fontWeight: "bold"
+        }}
+      >
         AppBuilderAI
       </div>
 
@@ -47,8 +62,13 @@ export default function Dashboard() {
           flexDirection: "column"
         }}
       >
-        {/* Chat */}
-        <div style={{ padding: "20px", borderBottom: "1px solid #222" }}>
+        {/* Chat Section */}
+        <div
+          style={{
+            padding: "20px",
+            borderBottom: "1px solid #222"
+          }}
+        >
           <textarea
             placeholder="Describe the app you want..."
             value={prompt}
@@ -80,14 +100,21 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* Output */}
-        <div style={{ flex: 1, padding: "20px", overflow: "auto" }}>
+        {/* Output Section */}
+        <div
+          style={{
+            flex: 1,
+            padding: "20px",
+            overflow: "auto"
+          }}
+        >
           <pre
             style={{
               background: "#111",
               padding: "20px",
               borderRadius: "6px",
-              minHeight: "100%"
+              minHeight: "100%",
+              whiteSpace: "pre-wrap"
             }}
           >
             {code}
